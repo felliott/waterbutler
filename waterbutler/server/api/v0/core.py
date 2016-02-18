@@ -88,7 +88,7 @@ class BaseProviderHandler(BaseHandler):
             self.arguments['provider'],
             self.payload['auth'],
             self.payload['credentials'],
-            self.payload['settings'],
+            self.payload['settings']
         )
 
         self.path = yield from self.provider.validate_path(**self.arguments)
@@ -101,6 +101,7 @@ class BaseProviderHandler(BaseHandler):
             'metadata': metadata,
             'auth': self.payload['auth'],
             'provider': self.arguments['provider'],
+            'passthrough': self.payload['passthrough'],
             'time': time.time() + 60
         })
         if resp.status != 200:
@@ -132,7 +133,12 @@ class BaseCrossProviderHandler(BaseHandler):
         )
         self.auth = payload
         self.callback_url = payload.pop('callback_url')
-        return utils.make_provider(provider, **payload)
+        return utils.make_provider(
+            provider,
+            payload['auth'],
+            payload['credentials'],
+            payload['settings']
+        )
 
     @property
     def json(self):
@@ -169,6 +175,7 @@ class BaseCrossProviderHandler(BaseHandler):
             },
             'destination': dict(data, nid=self.json['destination']['nid']),
             'auth': self.auth['auth'],
+            'passthrough': self.auth['passthrough'],
             'time': time.time() + 60
         })
 

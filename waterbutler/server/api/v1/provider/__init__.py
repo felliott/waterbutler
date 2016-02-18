@@ -158,6 +158,7 @@ class ProviderHandler(core.BaseHandler, CreateMixin, MetadataMixin, MoveCopyMixi
             'action': action,
             'time': time.time() + 60,
             'auth': self.auth['auth'],
+            'passthrough': self.auth['passthrough'],
             'provider': self.provider.NAME,
         }
 
