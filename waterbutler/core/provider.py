@@ -77,18 +77,21 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
     BASE_URL = None
 
-    def __init__(self, auth, credentials, settings, retry_on={408, 502, 503, 504}):
+    def __init__(self, auth, credentials, settings, passthrough, retry_on={408, 502, 503, 504}):
         """
         :param dict auth: Information about the user this provider will act on the behalf of
         :param dict credentials: The credentials used to authenticate with the provider,
             ofter an OAuth 2 token
         :param dict settings: Configuration settings for this provider,
             often folder or repo
+        :param dict passthrough: data from the authentication call to pass back via the logging
+            callback.  WB does not use this, merely passes it back unmodified.
         """
         self._retry_on = retry_on
         self.auth = auth
         self.credentials = credentials
         self.settings = settings
+        self.passthrough = passthrough
 
     @abc.abstractproperty
     def NAME(self):
@@ -109,6 +112,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
             'auth': self.auth,
             'settings': self.settings,
             'credentials': self.credentials,
+            'passthrough': self.passthrough,
         }
 
     def build_url(self, *segments, **query):

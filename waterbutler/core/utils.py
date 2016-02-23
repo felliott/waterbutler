@@ -22,7 +22,7 @@ sentry_dsn = settings.get('SENTRY_DSN', None)
 client = Client(sentry_dsn) if sentry_dsn else None
 
 
-def make_provider(name, auth, credentials, settings):
+def make_provider(name, auth, credentials, settings, passthrough):
     """Returns an instance of :class:`waterbutler.core.provider.BaseProvider`
 
     :param str name: The name of the provider to instantiate. (s3, box, etc)
@@ -37,7 +37,7 @@ def make_provider(name, auth, credentials, settings):
             namespace='waterbutler.providers',
             name=name,
             invoke_on_load=True,
-            invoke_args=(auth, credentials, settings),
+            invoke_args=(auth, credentials, settings, passthrough),
         )
     except RuntimeError:
         raise exceptions.ProviderNotFound(name)

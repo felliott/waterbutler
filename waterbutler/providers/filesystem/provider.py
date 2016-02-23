@@ -17,8 +17,8 @@ from waterbutler.providers.filesystem.metadata import FileSystemFolderMetadata
 class FileSystemProvider(provider.BaseProvider):
     NAME = 'filesystem'
 
-    def __init__(self, auth, credentials, settings):
-        super().__init__(auth, credentials, settings)
+    def __init__(self, auth, credentials, settings, passthrough):
+        super().__init__(auth, credentials, settings, passthrough)
         self.folder = self.settings['folder']
         os.makedirs(self.folder, exist_ok=True)
 

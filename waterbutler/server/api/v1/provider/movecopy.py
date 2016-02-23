@@ -86,7 +86,8 @@ class MoveCopyMixin:
                 self.json.get('provider', self.provider.NAME),
                 self.dest_auth['auth'],
                 self.dest_auth['credentials'],
-                self.dest_auth['settings']
+                self.dest_auth['settings'],
+                self.dest_auth['passthrough'],
             )
 
             self.dest_path = yield from self.dest_provider.validate_path(self.json['path'])

@@ -88,7 +88,8 @@ class BaseProviderHandler(BaseHandler):
             self.arguments['provider'],
             self.payload['auth'],
             self.payload['credentials'],
-            self.payload['settings']
+            self.payload['settings'],
+            self.payload['passthrough'],
         )
 
         self.path = yield from self.provider.validate_path(**self.arguments)
@@ -137,7 +138,8 @@ class BaseCrossProviderHandler(BaseHandler):
             provider,
             payload['auth'],
             payload['credentials'],
-            payload['settings']
+            payload['settings'],
+            payload['passthrough'],
         )
 
     @property

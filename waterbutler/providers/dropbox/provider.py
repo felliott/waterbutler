@@ -17,8 +17,8 @@ class DropboxProvider(provider.BaseProvider):
     NAME = 'dropbox'
     BASE_URL = settings.BASE_URL
 
-    def __init__(self, auth, credentials, settings):
-        super().__init__(auth, credentials, settings)
+    def __init__(self, auth, credentials, settings, passthrough):
+        super().__init__(auth, credentials, settings, passthrough)
         self.token = self.credentials['token']
         self.folder = self.settings['folder']
 

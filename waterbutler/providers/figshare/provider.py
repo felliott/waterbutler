@@ -17,11 +17,11 @@ from waterbutler.providers.figshare import utils as figshare_utils
 
 class FigshareProvider:
 
-    def __new__(cls, auth, credentials, settings):
+    def __new__(cls, auth, credentials, settings, passthrough):
         if settings['container_type'] == 'project':
-            return FigshareProjectProvider(auth, credentials, dict(settings, project_id=settings['container_id']))
+            return FigshareProjectProvider(auth, credentials, dict(settings, project_id=settings['container_id']), passthrough)
         if settings['container_type'] in ('article', 'fileset'):
-            return FigshareArticleProvider(auth, credentials, dict(settings, article_id=settings['container_id']))
+            return FigshareArticleProvider(auth, credentials, dict(settings, article_id=settings['container_id']), passthrough)
         raise exceptions.ProviderError('Invalid "container_type" {0}'.format(settings['container_type']))
 
 

@@ -42,7 +42,7 @@ class S3Provider(provider.BaseProvider):
     """
     NAME = 's3'
 
-    def __init__(self, auth, credentials, settings):
+    def __init__(self, auth, credentials, settings, passthrough):
         """
         .. note::
 
@@ -53,7 +53,7 @@ class S3Provider(provider.BaseProvider):
         :param dict credentials: Dict containing `access_key` and `secret_key`
         :param dict settings: Dict containing `bucket`
         """
-        super().__init__(auth, credentials, settings)
+        super().__init__(auth, credentials, settings, passthrough)
 
         self.connection = S3Connection(credentials['access_key'],
                 credentials['secret_key'], calling_format=OrdinaryCallingFormat())

@@ -28,8 +28,8 @@ class OSFStorageProvider(provider.BaseProvider):
 
     NAME = 'osfstorage'
 
-    def __init__(self, auth, credentials, settings):
-        super().__init__(auth, credentials, settings)
+    def __init__(self, auth, credentials, settings, passthrough):
+        super().__init__(auth, credentials, settings, passthrough)
         self.nid = settings['nid']
         self.root_id = settings['rootId']
         self.BASE_URL = settings['baseUrl']
@@ -124,6 +124,7 @@ class OSFStorageProvider(provider.BaseProvider):
             self.auth,
             self.credentials['storage'],
             self.settings['storage'],
+            {}
         )
 
     def can_duplicate_names(self):

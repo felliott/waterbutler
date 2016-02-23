@@ -48,7 +48,10 @@ class ProviderHandler(core.BaseHandler, CreateMixin, MetadataMixin, MoveCopyMixi
             getattr(self, self.PRE_VALIDATORS[method])()
 
         self.auth = yield from auth_handler.get(self.resource, provider, self.request)
-        self.provider = utils.make_provider(provider, self.auth['auth'], self.auth['credentials'], self.auth['settings'])
+        self.provider = utils.make_provider(
+            provider, self.auth['auth'], self.auth['credentials'], self.auth['settings'],
+            self.auth['passthrough']
+        )
         self.path = yield from self.provider.validate_v1_path(self.path)
 
         self.target_path = None

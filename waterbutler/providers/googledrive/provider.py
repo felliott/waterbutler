@@ -40,8 +40,8 @@ class GoogleDriveProvider(provider.BaseProvider):
     BASE_URL = settings.BASE_URL
     FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder'
 
-    def __init__(self, auth, credentials, settings):
-        super().__init__(auth, credentials, settings)
+    def __init__(self, auth, credentials, settings, passthrough):
+        super().__init__(auth, credentials, settings, passthrough)
         self.token = self.credentials['token']
         self.folder = self.settings['folder']
 
