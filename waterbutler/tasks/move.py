@@ -33,7 +33,7 @@ def move(src_bundle, dest_bundle, callback_url, auth, start_time=None, **kwargs)
             'kind': dest_path.kind,
         }),
         'auth': auth['auth'],
-        'passthrough': auth['passthrough'],
+        'passthrough': src_provider.passthrough,
     }
 
     logger.info('Starting moving {!r}, {!r} to {!r}, {!r}'.format(src_path, src_provider, dest_path, dest_provider))

@@ -177,7 +177,7 @@ class BaseCrossProviderHandler(BaseHandler):
             },
             'destination': dict(data, nid=self.json['destination']['nid']),
             'auth': self.auth['auth'],
-            'passthrough': self.auth['passthrough'],
+            'passthrough': self.source_provider.passthrough,
             'time': time.time() + 60
         })
 

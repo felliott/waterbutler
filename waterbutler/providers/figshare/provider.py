@@ -126,7 +126,7 @@ class FigshareProjectProvider(BaseFigshareProvider):
         if check_parent:
             yield from self._assert_contains_article(article_id)
         settings = {'article_id': article_id}
-        return FigshareArticleProvider(self.auth, self.credentials, settings, child=True)
+        return FigshareArticleProvider(self.auth, self.credentials, settings, self.passthrough, child=True)
 
     @asyncio.coroutine
     def _get_project_metadata(self):
@@ -222,8 +222,8 @@ class FigshareProjectProvider(BaseFigshareProvider):
 
 class FigshareArticleProvider(BaseFigshareProvider):
 
-    def __init__(self, auth, credentials, settings, child=False):
-        super().__init__(auth, credentials, settings)
+    def __init__(self, auth, credentials, settings, passthrough, child=False):
+        super().__init__(auth, credentials, settings, passthrough)
         self.article_id = self.settings['article_id']
         self.child = child
 
