@@ -448,7 +448,7 @@ def content_repo_metadata_root_file_txt():
 
 @pytest.fixture
 def provider(auth, credentials, settings, repo_metadata):
-    provider = GitHubProvider(auth, credentials, settings)
+    provider = GitHubProvider(auth, credentials, settings, {})
     provider._repo = repo_metadata
     provider.default_branch = repo_metadata['default_branch']
     return provider

@@ -41,7 +41,7 @@ def settings():
 
 @pytest.fixture
 def provider(auth, credentials, settings):
-    return DataverseProvider(auth, credentials, settings)
+    return DataverseProvider(auth, credentials, settings, {})
 
 
 @pytest.fixture

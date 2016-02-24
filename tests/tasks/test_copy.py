@@ -80,6 +80,7 @@ def src_bundle(src_path):
             'auth': {},
             'settings': {},
             'credentials': {},
+            'passthrough': {},
         }
     }
 
@@ -93,6 +94,7 @@ def dest_bundle(dest_path):
             'auth': {},
             'settings': {},
             'credentials': {},
+            'passthrough': {},
         }
     }
 
@@ -164,7 +166,8 @@ class TestCopyTask:
                 'destination': metadata.serialized(),
                 'auth': {'user': 'name'},
                 'time': FAKE_TIME + 60,
-                'email': False
+                'email': False,
+                'passthrough': {},
             }
         )
 

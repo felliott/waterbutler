@@ -36,7 +36,7 @@ def settings():
 
 @pytest.fixture
 def provider(auth, credentials, settings):
-    return DropboxProvider(auth, credentials, settings)
+    return DropboxProvider(auth, credentials, settings, {})
 
 
 @pytest.fixture

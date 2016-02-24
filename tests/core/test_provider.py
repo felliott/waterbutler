@@ -9,12 +9,12 @@ from waterbutler.core import exceptions
 
 @pytest.fixture
 def provider1():
-    return utils.MockProvider1({'user': 'name'}, {'pass': 'word'}, {})
+    return utils.MockProvider1({'user': 'name'}, {'pass': 'word'}, {}, {})
 
 
 @pytest.fixture
 def provider2():
-    return utils.MockProvider2({'user': 'name'}, {'pass': 'phrase'}, {})
+    return utils.MockProvider2({'user': 'name'}, {'pass': 'phrase'}, {}, {})
 
 
 class TestBaseProvider:
@@ -29,7 +29,8 @@ class TestBaseProvider:
             'name': 'MockProvider1',
             'auth': {'user': 'name'},
             'settings': {},
-            'credentials': {'pass': 'word'}
+            'credentials': {'pass': 'word'},
+            'passthrough': {},
         }
 
     def test_cant_intra_move(self, provider1):

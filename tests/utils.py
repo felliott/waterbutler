@@ -77,8 +77,8 @@ class MockProvider(provider.BaseProvider):
     revalidate_path = None
     can_duplicate_names = True
 
-    def __init__(self, auth=None, settings=None, creds=None):
-        super().__init__(auth or {}, settings or {}, creds or {})
+    def __init__(self, auth=None, settings=None, creds=None, passthrough=None):
+        super().__init__(auth or {}, settings or {}, creds or {}, passthrough or {})
         self.copy = MockCoroutine()
         self.move = MockCoroutine()
         self.delete = MockCoroutine()
@@ -144,7 +144,8 @@ class HandlerTestCase(testing.AsyncHTTPTestCase):
                 'auth': {},
                 'credentials': {},
                 'settings': {},
-                'callback_url': 'example.com'
+                'callback_url': 'example.com',
+                'passthrough': {},
             })
 
         self.mock_identity = MockCoroutine(side_effect=get_identity)
@@ -152,7 +153,7 @@ class HandlerTestCase(testing.AsyncHTTPTestCase):
         # self.mock_identity.return_value = identity_future
         self.identity_patcher = mock.patch('waterbutler.server.api.v0.core.auth_handler.fetch', self.mock_identity)
 
-        self.mock_provider = MockProvider1({}, {}, {})
+        self.mock_provider = MockProvider1({}, {}, {}, {})
         self.mock_make_provider = mock.Mock(return_value=self.mock_provider)
         self.make_provider_patcher = mock.patch('waterbutler.core.utils.make_provider', self.mock_make_provider)
 
@@ -175,8 +176,8 @@ class MultiProviderHandlerTestCase(HandlerTestCase):
 
     def setUp(self):
         super().setUp()
-        self.source_provider = MockProvider2({}, {}, {})
-        self.destination_provider = MockProvider2({}, {}, {})
+        self.source_provider = MockProvider2({}, {}, {}, {})
+        self.destination_provider = MockProvider2({}, {}, {}, {})
 
         self.mock_send_hook = mock.Mock()
         self.send_hook_patcher = mock.patch(self.HOOK_PATH, self.mock_send_hook)
@@ -198,14 +199,14 @@ class MultiProviderHandlerTestCase(HandlerTestCase):
                 'nid': 'foo',
                 'provider': 'source',
                 'path': '/source/path',
-                'callback_url': 'example.com'
+                'callback_url': 'example.com',
             },
             'destination': {
                 'nid': 'bar',
                 'provider': 'destination',
                 'path': '/destination/path',
-                'callback_url': 'example.com'
-            }
+                'callback_url': 'example.com',
+            },
         })
 
 

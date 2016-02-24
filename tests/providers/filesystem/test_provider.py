@@ -33,7 +33,7 @@ def settings(tmpdir):
 
 @pytest.fixture
 def provider(auth, credentials, settings):
-    return FileSystemProvider(auth, credentials, settings)
+    return FileSystemProvider(auth, credentials, settings, {})
 
 
 @pytest.fixture(scope="function", autouse=True)

@@ -73,7 +73,7 @@ def settings():
 
 @pytest.fixture
 def provider_and_mock(monkeypatch, auth, credentials, settings):
-    mock_provider = utils.MockProvider1({}, {}, {})
+    mock_provider = utils.MockProvider1({}, {}, {}, {})
 
     mock_provider.copy = utils.MockCoroutine()
     mock_provider.move = utils.MockCoroutine()
@@ -84,7 +84,7 @@ def provider_and_mock(monkeypatch, auth, credentials, settings):
 
     mock_make_provider = mock.Mock(return_value=mock_provider)
     monkeypatch.setattr(OSFStorageProvider, 'make_provider', mock_make_provider)
-    return OSFStorageProvider(auth, credentials, settings), mock_provider
+    return OSFStorageProvider(auth, credentials, settings, {}), mock_provider
 
 
 @pytest.fixture

@@ -36,7 +36,7 @@ def settings():
 
 @pytest.fixture
 def mock_provider(monkeypatch):
-    mock_provider = test_utils.MockProvider1({}, {}, {})
+    mock_provider = test_utils.MockProvider1({}, {}, {}, {})
 
     mock_provider.copy = test_utils.MockCoroutine()
     mock_provider.move = test_utils.MockCoroutine()

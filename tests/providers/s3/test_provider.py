@@ -52,7 +52,7 @@ def mock_time(monkeypatch):
 
 @pytest.fixture
 def provider(auth, credentials, settings):
-    provider = S3Provider(auth, credentials, settings)
+    provider = S3Provider(auth, credentials, settings, {})
     provider._check_region = MockCoroutine()
     return provider
 
@@ -317,7 +317,7 @@ class TestRegionDetection:
         ('sa-east-1',      's3-sa-east-1.amazonaws.com'),
     ])
     def test_region_host(self, auth, credentials, settings, region_name, host, mock_time):
-        provider = S3Provider(auth, credentials, settings)
+        provider = S3Provider(auth, credentials, settings, {})
         orig_host = provider.connection.host
 
         region_url = provider.bucket.generate_url(

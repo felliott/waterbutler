@@ -62,7 +62,7 @@ def settings():
 
 @pytest.fixture
 def provider(auth, credentials, settings):
-    return GoogleDriveProvider(auth, credentials, settings)
+    return GoogleDriveProvider(auth, credentials, settings, {})
 
 
 @pytest.fixture

@@ -37,7 +37,7 @@ def settings():
 
 @pytest.fixture
 def provider(auth, credentials, settings):
-    return BoxProvider(auth, credentials, settings)
+    return BoxProvider(auth, credentials, settings, {})
 
 
 @pytest.fixture
