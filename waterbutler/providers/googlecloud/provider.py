@@ -164,7 +164,11 @@ class GoogleCloudProvider(BaseProvider):
         :rtype: bool
         """
 
+        logger.info('+++ gcloud path:({})'.format(path))
+        logger.info('+++ stream type:({})'.format(type(stream)))
+
         created = not await self.exists(path)
+
 
         stream.add_writer('md5', HashStreamWriter(hashlib.md5))
 
@@ -241,6 +245,7 @@ class GoogleCloudProvider(BaseProvider):
             expects=(HTTPStatus.OK, HTTPStatus.PARTIAL_CONTENT),
             throws=DownloadError
         )
+        logger.info('+-+-+-+-+-+ resp isa:({}) is:({})'.format(type(resp), resp))
         return ResponseStreamReader(resp)
 
     async def delete(self, path: WaterButlerPath, *args, **kwargs) -> None:  # type: ignore

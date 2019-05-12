@@ -47,8 +47,10 @@ class BoxProvider(provider.BaseProvider):
         super().__init__(auth, credentials, settings)
         self.token = self.credentials['token']  # type: str
         self.folder = self.settings['folder']  # type: str
+        logger.info('@@@ token:({})  folder:({})'.format(self.token, self.folder))
 
     async def validate_v1_path(self, path: str, **kwargs) -> WaterButlerPath:
+        logger.info('@@@ path:({})'.format(path))
         if path == '/':
             return WaterButlerPath('/', _ids=[self.folder])
 
@@ -420,38 +422,50 @@ class BoxProvider(provider.BaseProvider):
 
     async def _get_folder_meta(self, path: WaterButlerPath, raw: bool=False,
                                folder: bool=False) -> Union[dict, List[BoxFolderMetadata]]:
+        logger.info('@@@ path:({})  folder:({})'.format(path, folder))
         if folder:
-            async with self.request(
-                'GET', self.build_url('folders', path.identifier),
-                expects=(200, ), throws=exceptions.MetadataError,
-            ) as resp:
-                data = await resp.json()
-                return data if raw else self._serialize_item(data, path)
+            logger.info('@@@ before request')
+            response = await self.make_request(
+                'GET',
+                self.build_url('folders', path.identifier),
+                expects=(200, ),
+                throws=exceptions.MetadataError,
+            )
+            logger.info('@@@ after request')
+            data = await response.json()
+            return data if raw else self._serialize_item(data, path)
 
         # Box maximum limit is 1000
         page_count, page_total, limit = 0, None, 1000
         full_resp = {} if raw else []  # type: ignore
         while page_total is None or page_count < page_total:
+            logger.info('@@@ count:({})  total:({})  limit:({})'.format(page_count, page_total, limit))
             url = self.build_url('folders', path.identifier, 'items',
                                  fields='id,name,size,modified_at,etag,total_count',
                                  offset=(page_count * limit),
                                  limit=limit)
-            async with self.request('GET', url, expects=(200, ),
-                                    throws=exceptions.MetadataError) as response:
-                resp_json = await response.json()
-                if raw:
-                    full_resp.update(resp_json)  # type: ignore
-                else:
-                    full_resp.extend([  # type: ignore
-                        self._serialize_item(
-                            each, path.child(each['name'], folder=(each['type'] == 'folder'))
-                        )
-                        for each in resp_json['entries']
-                    ])
+            logger.info('@@@ tingle!')
+            response = await self.make_request(
+                'GET',
+                url,
+                expects=(200, ),
+                throws=exceptions.MetadataError,
+            )
+            logger.info('@@@ tangle!')
+            resp_json = await response.json()
+            if raw:
+                full_resp.update(resp_json)  # type: ignore
+            else:
+                full_resp.extend([  # type: ignore
+                    self._serialize_item(
+                        each, path.child(each['name'], folder=(each['type'] == 'folder'))
+                    )
+                    for each in resp_json['entries']
+                ])
 
-                page_count += 1
-                if page_total is None:
-                    page_total = ((resp_json['total_count'] - 1) // limit) + 1  # ceiling div
+            page_count += 1
+            if page_total is None:
+                page_total = ((resp_json['total_count'] - 1) // limit) + 1  # ceiling div
         self.metrics.add('metadata.folder.pages', page_total)
         return full_resp
 

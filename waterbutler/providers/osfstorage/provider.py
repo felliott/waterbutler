@@ -557,6 +557,7 @@ class OSFStorageProvider(provider.BaseProvider):
         complete_name = stream.writers['sha256'].hexdigest
         remote_complete_path = await provider.validate_path('/' + complete_name)
 
+        logger.info('=== remote_complete_path:({})'.format(remote_complete_path))
         try:
             metadata = await provider.metadata(remote_complete_path)
         except exceptions.MetadataError as e:
