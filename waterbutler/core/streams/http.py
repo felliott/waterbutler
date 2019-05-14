@@ -190,6 +190,7 @@ class RequestStreamReader(BaseStream):
 
     def __init__(self, request, inner):
         logger.info('???-Q->>> making a REQUESTstreamreader')
+        logger.info('???-Q->>>   request.isa:({})  inner.isa:({})'.format(type(request), type(inner)))
         super().__init__()
         self.inner = inner
         self.request = request
