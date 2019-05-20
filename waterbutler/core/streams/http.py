@@ -172,8 +172,8 @@ class ResponseStreamReader(BaseStream):
     async def _read(self, size):
         logger.info('================================================================================')
         logger.info('???-S->>> _read, size:({})'.format(size))
-        import traceback
-        traceback.print_stack()
+        # import traceback
+        # traceback.print_stack()
         chunk = (await self.response.content.read(size))
         logger.info('???-S->>> _read, process chunk')
         if not chunk:
@@ -204,8 +204,8 @@ class RequestStreamReader(BaseStream):
 
     async def _read(self, size):
         logger.info('???-Q->>> ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-        import traceback
-        traceback.print_stack()
+        # import traceback
+        # traceback.print_stack()
         logger.info('???-Q->>> _read, size:({})'.format(size))
         if self.inner.at_eof():
             logger.info('???-Q->>> at_eof! all done, return empty byte')
