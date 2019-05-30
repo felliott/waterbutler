@@ -12,9 +12,6 @@ class HashStreamWriter:
     def hexdigest(self):
         return self.hash.hexdigest()
 
-    def can_write_eof(self):
-        return False
-
     def write(self, data):
         self.hash.update(data)
 

@@ -2,7 +2,7 @@ import uuid
 import asyncio
 import logging
 
-from waterbutler.core.streams.base import BaseStream, MultiStream, StringStream
+from waterbutler.core.streams.base import SimpleStreamWrapper, MultiStream, StringStream
 
 logger = logging.getLogger(__name__)
 
@@ -135,7 +135,7 @@ class FormDataStream(MultiStream):
         return StringStream('--{}\r\n'.format(self.boundary))
 
 
-class ResponseStreamReader(BaseStream):
+class ResponseStreamReader(SimpleStreamWrapper):
 
     def __init__(self, response, size=None, name=None):
         logger.info('??? making a RESPONSEstreamreader')
@@ -186,7 +186,7 @@ class ResponseStreamReader(BaseStream):
         return chunk
 
 
-class RequestStreamReader(BaseStream):
+class RequestStreamReader(SimpleStreamWrapper):
 
     def __init__(self, request, inner):
         logger.info('???-Q->>> making a REQUESTstreamreader')
