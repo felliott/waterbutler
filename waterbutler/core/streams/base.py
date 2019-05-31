@@ -12,10 +12,9 @@ class SimpleStreamWrapper(metaclass=abc.ABCMeta):
     bytes from its source and returns it.
     """
 
-    def __init__(self, readable):
+    def __init__(self):
         super().__init__()
-        assert readable.hasattr('read')
-        self._readable = readable
+        self._at_eof = False
 
     def __aiter__(self):
         return self
@@ -24,7 +23,7 @@ class SimpleStreamWrapper(metaclass=abc.ABCMeta):
     # TODO: Improve the BaseStream with `aiohttp.streams.AsyncStreamReaderMixin`
     async def __anext__(self):
         try:
-            chunk = await self._readable.read()
+            chunk = await self.read()
         except EOFError:
             raise StopAsyncIteration
         if chunk == b'':
@@ -35,6 +34,9 @@ class SimpleStreamWrapper(metaclass=abc.ABCMeta):
     def size(self):
         pass
 
+    def at_eof(self):
+        return self._at_eof
+
     @abc.abstractproperty
     async def read(self):
         pass
@@ -42,8 +44,10 @@ class SimpleStreamWrapper(metaclass=abc.ABCMeta):
 
 class DigestStreamWrapper(SimpleStreamWrapper):
 
-    def __init__(self, readable: SimpleStreamWrapper, writers=None: dict, *args, **kwargs):
-        super().__init__(readable, *args, **kwargs)
+    def __init__(self, readable: SimpleStreamWrapper, writers=None: dict):
+        super().__init__()
+        assert readable.hasattr('read')
+        self._readable = readable
         self.writers = writers
 
     def size(self):
@@ -116,7 +120,10 @@ class CutoffStream(SimpleStreamWrapper):
     """
 
     def __init__(self, readable: SimpleStreamWrapper, cutoff):
-        super().__init__(readable)
+        super().__init__()
+
+        assert readable.hasattr('read')
+        self._readable = readable
 
         self._cutoff = cutoff
         self._thus_far = 0
@@ -161,10 +168,14 @@ class StringStream(SimpleStreamWrapper):
 
         self._size = len(data)
         self._data = data
+        self._at_eof = False
 
     @property
     def size(self):
         return self._size
+
+    def at_eof(self):
+        return self._at_eof
 
     async def read(self, n=-1):
 
@@ -173,6 +184,9 @@ class StringStream(SimpleStreamWrapper):
 
         chunk = data[0:n-1]
         data = data[n:]
+        if len(data) == 0:
+            self._at_eof = True
+
         return chunk
 
 
@@ -181,10 +195,16 @@ class EmptyStream(SimpleStreamWrapper):
     empty folders when building zipfiles.
     """
     def __init__(self):
+        self._at_eof = False
         pass
 
+    @property
     def size(self):
         return 0
 
-    async def _read(self, n):
+    def at_eof(self):
+        return self._at_eof
+
+    async def read(self, n=-1):
+        self._at_eof = True
         return bytearray()

@@ -25,7 +25,7 @@ class FileStreamReader(SimpleStreamWrapper):
 
     def close(self):
         self._file_pointer.close()
-        self.feed_eof()
+        self._at_eof = True
 
     @agent.async_generator
     def _chunk_reader(self):
