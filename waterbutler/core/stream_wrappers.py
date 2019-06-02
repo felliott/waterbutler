@@ -107,7 +107,7 @@ class MultiStreamWrapper(SimpleStreamWrapper):
         return chunk
 
 
-class CutoffStream(SimpleStreamWrapper):
+class CutoffStreamWrapper(SimpleStreamWrapper):
     """A wrapper around an existing stream that terminates after pulling off the specified number
     of bytes.  Useful for segmenting an existing stream into parts suitable for chunked upload
     interfaces.
@@ -212,7 +212,8 @@ class EmptyStreamWrapper(SimpleStreamWrapper):
         self._at_eof = True
         return bytearray()
 
-class ResponseStreamReader(SimpleStreamWrapper):
+
+class ResponseStreamWrapper(SimpleStreamWrapper):
 
     def __init__(self, response, size=None, name=None):
         logger.info('??? making a RESPONSEstreamreader')
@@ -263,7 +264,7 @@ class ResponseStreamReader(SimpleStreamWrapper):
         return chunk
 
 
-class RequestStreamReader(SimpleStreamWrapper):
+class RequestStreamWrapper(SimpleStreamWrapper):
 
     def __init__(self, request, inner):
         logger.info('???-Q->>> making a REQUESTstreamreader')
@@ -305,7 +306,7 @@ class RequestStreamReader(SimpleStreamWrapper):
         logger.info('???-Q->>> jfc actuallyfingreturingnotcool')
 
 
-class Base64EncodeStream(SimpleStreamWrapper):
+class Base64EncodeStreamWrapper(SimpleStreamWrapper):
 
     @staticmethod
     def calculate_encoded_size(size):

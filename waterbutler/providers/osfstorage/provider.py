@@ -11,7 +11,7 @@ from waterbutler.core import provider
 from waterbutler.core import exceptions
 from waterbutler.core.path import WaterButlerPath
 from waterbutler.core.metadata import BaseMetadata
-from waterbutler.core.streams import SimpleStreamWrapper, DigestStreamWrapper
+from waterbutler.core.stream_wrappers import SimpleStreamWrapper, DigestStreamWrapper
 
 from waterbutler.providers.osfstorage import settings
 from waterbutler.providers.osfstorage.metadata import OsfStorageFileMetadata
