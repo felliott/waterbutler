@@ -3,47 +3,48 @@ import asyncio
 
 import agent
 
-from waterbutler.core.streams.base import SimpleStreamWrapper
+from waterbutler.core.streams.base import BaseStream
 
 
-class FileStreamReader(SimpleStreamWrapper):
+class FileStreamReader(BaseStream):
 
     def __init__(self, file_pointer):
         super().__init__()
-
-        self._file_pointer = file_pointer
+        self.file_gen = None
+        self.file_pointer = file_pointer
         self.read_size = None
         self.content_type = 'application/octet-stream'
 
     @property
     def size(self):
         cursor = self.file_pointer.tell()
-        self._file_pointer.seek(0, os.SEEK_END)
-        ret = self._file_pointer.tell()
-        self._file_pointer.seek(cursor)
+        self.file_pointer.seek(0, os.SEEK_END)
+        ret = self.file_pointer.tell()
+        self.file_pointer.seek(cursor)
         return ret
 
     def close(self):
-        self._file_pointer.close()
-        self._at_eof = True
+        self.file_pointer.close()
+        self.feed_eof()
 
     @agent.async_generator
-    def _chunk_reader(self):
-        self._file_pointer.seek(0)
+    def chunk_reader(self):
+        self.file_pointer.seek(0)
         while True:
-            chunk = self._file_pointer.read(self.read_size)
+            chunk = self.file_pointer.read(self.read_size)
             if not chunk:
                 self.feed_eof()
                 yield b''
 
             yield chunk
 
-    async def read(self, size):
+    async def _read(self, size):
+        self.file_gen = self.file_gen or self.chunk_reader()
         self.read_size = size
         # add sleep of 0 so read will yield and continue in next io loop iteration
         # asyncio.sleep(0) yields None by default, which displeases tornado
         await asyncio.sleep(0.001)
-        async for chunk in self._chunk_reader():
+        async for chunk in self.file_gen:
             return chunk
 
 
@@ -55,7 +56,6 @@ class PartialFileStreamReader(FileStreamReader):
 
     def __init__(self, file_pointer, byte_range):
         super().__init__(file_pointer)
-
         self.start = byte_range[0]
         self.end = byte_range[1]
         self.bytes_read = 0
@@ -69,7 +69,7 @@ class PartialFileStreamReader(FileStreamReader):
         cursor = self.file_pointer.tell()
         self.file_pointer.seek(0, os.SEEK_END)
         ret = self.file_pointer.tell()
-        self._file_pointer.seek(cursor)
+        self.file_pointer.seek(cursor)
         return ret
 
     @property
@@ -82,20 +82,22 @@ class PartialFileStreamReader(FileStreamReader):
 
     @agent.async_generator
     def chunk_reader(self):
-        self._file_pointer.seek(self.start)
+        self.file_pointer.seek(self.start)
         while True:
-            chunk = self._file_pointer.read(self.read_size)
+            chunk = self.file_pointer.read(self.read_size)
             self.bytes_read += self.read_size
             if not chunk:
+                self.feed_eof()
                 yield b''
 
             yield chunk
 
-    async def read(self, size):
+    async def _read(self, size):
+        self.file_gen = self.file_gen or self.chunk_reader()
         bytes_remaining = self.size - self.bytes_read
         self.read_size = bytes_remaining if size == -1 else min(size, bytes_remaining)
         # add sleep of 0 so read will yield and continue in next io loop iteration
         # asyncio.sleep(0) yields None by default, which displeases tornado
         await asyncio.sleep(0.001)
-        async for chunk in self.chunk_reader():
+        async for chunk in self.file_gen:
             return chunk
