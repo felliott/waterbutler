@@ -1,6 +1,7 @@
 import uuid
 
-from waterbutler.core.streams.base import MultiStream, SimpleStreamWrapper, StringStream
+from waterbutler.core.streams.base import (SimpleStreamWrapper, MultiStreamWrapper,
+                                           StringStreamWrapper)
 
 
 def make_multistream_from_json(data):
@@ -29,14 +30,16 @@ def make_multistream_from_json(data):
 
     """
 
-    streams = [StringStream('{')]
+    streams = [StringStreamWrapper('{')]
     for key, value in data.items():
         if not isinstance(value, SimpleStreamWrapper):
-            value = StringStream(value)
-        streams.extend([StringStream('"{}":"'.format(key)), value, StringStream('",')])
+            value = StringStreamWrapper(value)
+        streams.extend([StringStreamWrapper('"{}":"'.format(key)),
+                        value,
+                        StringStreamWrapper('",')])
 
-    streams.extend([StringStream('"}')])
-    return MultiStream(streams)
+    streams.extend([StringStreamWrapper('"}')])
+    return MultiStreamWrapper(streams)
 
 
 def make_formdata_multistream(data):
@@ -61,10 +64,10 @@ def make_formdata_multistream(data):
     """
 
     def _start_boundary(boundary):
-        return StringStream('--{}\r\n'.format(boundary))
+        return StringStreamWrapper('--{}\r\n'.format(boundary))
 
     def _end_boundary(boundary):
-        return StringStream('--{}--\r\n'.format(boundary))
+        return StringStreamWrapper('--{}--\r\n'.format(boundary))
 
     def _make_header(name, disposition='form-data', additional_headers=None, **extra):
         additional_headers = additional_headers or {}
@@ -112,15 +115,15 @@ def make_formdata_multistream(data):
                 }
             )
             streams.extend([
-                StringStream(header),
+                StringStreamWrapper(header),
                 value['stream'],
-                StringStream('\r\n')
+                StringStreamWrapper('\r\n')
             ])
         else:
             streams.extend([
-                StringStream(_make_header(key) + value + '\r\n')
+                StringStreamWrapper(_make_header(key) + value + '\r\n')
             ])
 
     streams.extend([_end_boundary(boundary)])
 
-    return MultiStream(streams, headers=_make_headers(boundary))
+    return MultiStreamWrapper(streams, headers=_make_headers(boundary))

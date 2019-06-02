@@ -67,7 +67,7 @@ class MultiStreamWrapper(SimpleStreamWrapper):
     data for <whutch?>.
     """
 
-    def __init__(self, *readables: List[SimpleStreamWrapper]) -> None:
+    def __init__(self, *readables: SimpleStreamWrapper) -> None:
         super().__init__()
 
         self._size = 0
@@ -154,7 +154,7 @@ class CutoffStream(SimpleStreamWrapper):
         return chunk
 
 
-class StringStream(SimpleStreamWrapper):
+class StringStreamWrapper(SimpleStreamWrapper):
     """A StringWrapper class for short(!) strings.  PLEASE DON'T USE THIS FOR LARGE STRINGS!
     A StringStream.read(-1) will read the *entire* string into memory.  All of the data passed in
     the constructor is saved in the class.
@@ -191,7 +191,7 @@ class StringStream(SimpleStreamWrapper):
         return chunk
 
 
-class EmptyStream(SimpleStreamWrapper):
+class EmptyStreamWrapper(SimpleStreamWrapper):
     """An empty stream with size 0 that returns nothing when read. Useful for representing
     empty folders when building zipfiles.
     """

@@ -2,7 +2,8 @@
 from waterbutler.core.streams.base import SimpleStreamWrapper  # noqa
 from waterbutler.core.streams.base import DigestStreamWrapper  # noqa
 from waterbutler.core.streams.base import MultiStreamWrapper  # noqa
-from waterbutler.core.streams.base import CutoffStreamWrapper  # noqa
+from waterbutler.core.streams.base import StringStreamWrapper  # noqa
+from waterbutler.core.streams.base import EmptyStreamWrapper  # noqa
 
 from waterbutler.core.streams.file import FileStreamReader  # noqa
 from waterbutler.core.streams.file import PartialFileStreamReader  # noqa
