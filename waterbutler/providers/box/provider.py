@@ -12,7 +12,6 @@ import aiohttp
 from waterbutler.core.path import WaterButlerPath
 from waterbutler.core import exceptions, streams, provider
 from waterbutler.core.exceptions import RetryChunkedUploadCommit
-from waterbutler.core.streams.factories import make_formdata_multistream
 
 from waterbutler.providers.box import settings as pd_settings
 from waterbutler.providers.box.metadata import (BaseBoxMetadata, BoxRevision,
@@ -48,10 +47,8 @@ class BoxProvider(provider.BaseProvider):
         super().__init__(auth, credentials, settings)
         self.token = self.credentials['token']  # type: str
         self.folder = self.settings['folder']  # type: str
-        logger.info('@@@ token:({})  folder:({})'.format(self.token, self.folder))
 
     async def validate_v1_path(self, path: str, **kwargs) -> WaterButlerPath:
-        logger.info('@@@ path:({})'.format(path))
         if path == '/':
             return WaterButlerPath('/', _ids=[self.folder])
 
@@ -423,50 +420,38 @@ class BoxProvider(provider.BaseProvider):
 
     async def _get_folder_meta(self, path: WaterButlerPath, raw: bool=False,
                                folder: bool=False) -> Union[dict, List[BoxFolderMetadata]]:
-        logger.info('@@@ path:({})  folder:({})'.format(path, folder))
         if folder:
-            logger.info('@@@ before request')
-            response = await self.make_request(
-                'GET',
-                self.build_url('folders', path.identifier),
-                expects=(200, ),
-                throws=exceptions.MetadataError,
-            )
-            logger.info('@@@ after request')
-            data = await response.json()
-            return data if raw else self._serialize_item(data, path)
+            async with self.request(
+                'GET', self.build_url('folders', path.identifier),
+                expects=(200, ), throws=exceptions.MetadataError,
+            ) as resp:
+                data = await resp.json()
+                return data if raw else self._serialize_item(data, path)
 
         # Box maximum limit is 1000
         page_count, page_total, limit = 0, None, 1000
         full_resp = {} if raw else []  # type: ignore
         while page_total is None or page_count < page_total:
-            logger.info('@@@ count:({})  total:({})  limit:({})'.format(page_count, page_total, limit))
             url = self.build_url('folders', path.identifier, 'items',
                                  fields='id,name,size,modified_at,etag,total_count',
                                  offset=(page_count * limit),
                                  limit=limit)
-            logger.info('@@@ tingle!')
-            response = await self.make_request(
-                'GET',
-                url,
-                expects=(200, ),
-                throws=exceptions.MetadataError,
-            )
-            logger.info('@@@ tangle!')
-            resp_json = await response.json()
-            if raw:
-                full_resp.update(resp_json)  # type: ignore
-            else:
-                full_resp.extend([  # type: ignore
-                    self._serialize_item(
-                        each, path.child(each['name'], folder=(each['type'] == 'folder'))
-                    )
-                    for each in resp_json['entries']
-                ])
+            async with self.request('GET', url, expects=(200, ),
+                                    throws=exceptions.MetadataError) as response:
+                resp_json = await response.json()
+                if raw:
+                    full_resp.update(resp_json)  # type: ignore
+                else:
+                    full_resp.extend([  # type: ignore
+                        self._serialize_item(
+                            each, path.child(each['name'], folder=(each['type'] == 'folder'))
+                        )
+                        for each in resp_json['entries']
+                    ])
 
-            page_count += 1
-            if page_total is None:
-                page_total = ((resp_json['total_count'] - 1) // limit) + 1  # ceiling div
+                page_count += 1
+                if page_total is None:
+                    page_total = ((resp_json['total_count'] - 1) // limit) + 1  # ceiling div
         self.metrics.add('metadata.folder.pages', page_total)
         return full_resp
 
@@ -504,8 +489,7 @@ class BoxProvider(provider.BaseProvider):
             folder._children = await self._get_folder_meta(path)  # type: ignore
             return folder, created
 
-    async def _contiguous_upload(self, path: WaterButlerPath,
-                                 stream: streams.SimpleStreamWrapper) -> dict:
+    async def _contiguous_upload(self, path: WaterButlerPath, stream: streams.BaseStream) -> dict:
         """Upload a file to Box using a single request. This will only be called if the file is
         smaller than the ``NONCHUNKED_UPLOAD_LIMIT``.
 
@@ -514,13 +498,13 @@ class BoxProvider(provider.BaseProvider):
         assert stream.size <= self.NONCHUNKED_UPLOAD_LIMIT
         stream.add_writer('sha1', streams.HashStreamWriter(hashlib.sha1))
 
-        data_stream = make_formdata_multistream({
-            'attributes': json.dumps({
+        data_stream = streams.FormDataStream(
+            attributes=json.dumps({
                 'name': path.name,
                 'parent': {'id': path.parent.identifier}
-            }),
-            'file': {'stream': stream, 'name': path.name, 'disposition': 'form-data'},
-        })
+            })
+        )
+        data_stream.add_file('file', stream, path.name, disposition='form-data')
 
         if path.identifier is not None:
             segments = ['files', path.identifier, 'content']
