@@ -125,12 +125,7 @@ class OsfAuthHandler(BaseAuthHandler):
                 raise exceptions.UnsupportedActionError(mfr_action, supported=mfr_action_map.keys())
         else:
             try:
-                if method == 'get' and 'meta' in request.query_arguments:
-                    osf_action = 'metadata'
-                elif method == 'get' and 'revisions' in request.query_arguments:
-                    osf_action = 'revisions'
-                else:
-                    osf_action = self.ACTION_MAP[method]
+                osf_action = self.ACTION_MAP[method]
             except KeyError:
                 raise exceptions.UnsupportedHTTPMethodError(method, supported=self.ACTION_MAP.keys())
 

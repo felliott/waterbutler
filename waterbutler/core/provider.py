@@ -263,11 +263,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
         while retry >= 0:
             # Don't overwrite the callable ``url`` so that signed URLs are refreshed for every retry
             non_callable_url = url() if callable(url) else url
-            logger.info('>>> non-callable url:({})  time:({})'.format(non_callable_url, time.time()))
             try:
-                # self.provider_metrics.incr('requests.count')
-                # self.provider_metrics.append('requests.urls', non_callable_url)
-                logger.info('>>> method:({}) headers:({})'.format(method, kwargs['headers']))
+                self.provider_metrics.incr('requests.count')
+                self.provider_metrics.append('requests.urls', non_callable_url)
                 # TODO: use a `dict` to select methods with either `lambda` or `functools.partial`
                 if method == 'GET':
                     response = await session.get(non_callable_url, *args, **kwargs)
@@ -287,7 +285,6 @@ class BaseProvider(metaclass=abc.ABCMeta):
                     raise exceptions.WaterButlerError('Unsupported HTTP method ...')
                 self.provider_metrics.append('requests.verbose',
                                              ['OK', response.status, non_callable_url])
-                logger.info('>>> response status:({})  time:({})'.format(response.status, time.time()))
                 if expects and response.status not in expects:
                     unexpected = await exceptions.exception_from_response(response,
                                                                           error=throws, **kwargs)
