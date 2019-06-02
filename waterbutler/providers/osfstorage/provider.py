@@ -7,6 +7,7 @@ import logging
 
 from waterbutler.core import utils
 from waterbutler.core import signing
+from waterbutler.core import streams
 from waterbutler.core import provider
 from waterbutler.core import exceptions
 from waterbutler.core.path import WaterButlerPath
@@ -221,7 +222,7 @@ class OSFStorageProvider(provider.BaseProvider):
         download_kwargs['display_name'] = kwargs.get('display_name') or name
         return await provider.download(**download_kwargs)
 
-    async def upload(self, stream: SimpleStreamWrapper, path, **kwargs):
+    async def upload(self, stream: SimpleStreamWrapper, path, **kwargs):  # type: ignore
         """Upload a new file to osfstorage
 
         When a file is uploaded to osfstorage, WB does a bit of a dance to make sure it gets there
@@ -238,8 +239,8 @@ class OSFStorageProvider(provider.BaseProvider):
         issuer.
         """
 
-        metadata, digests = await self._send_to_storage_provider(stream, path, **kwargs)
-        metadata = metadata.serialized()
+        metadata_obj, digests = await self._send_to_storage_provider(stream, path, **kwargs)
+        metadata = metadata_obj.serialized()
 
         data, created = await self._send_to_metadata_provider(path, metadata, digests, **kwargs)
 
@@ -536,15 +537,20 @@ class OSFStorageProvider(provider.BaseProvider):
         return folder_meta, created
 
     async def _send_to_storage_provider(self, stream: SimpleStreamWrapper, path,
-                                        **kwargs) -> typing.Tuple[dict, dict]:
+                                        **kwargs) -> typing.Tuple[BaseMetadata, dict]:
         """Send uploaded file data to the storage provider, where it will be stored w/o metadata
         in a content-addressable format.
 
         :return: metadata of the file as it exists on the storage provider
         """
 
-        all_digests = ['md5', 'sha1', 'sha256']
-        digest_stream = DigestStreamWrapper(stream, [[x, getattr(hashlib, x)] for x in all_digests])
+        digest_objs = {
+            'md5': streams.HashStreamWriter(hashlib.md5),
+            'sha1': streams.HashStreamWriter(hashlib.sha1),
+            'sha256': streams.HashStreamWriter(hashlib.sha256),
+        }
+
+        digest_stream = DigestStreamWrapper(stream, digest_objs)
 
         pending_name = str(uuid.uuid4())
         provider = self.make_provider(self.settings)
@@ -568,8 +574,8 @@ class OSFStorageProvider(provider.BaseProvider):
             await provider.delete(remote_pending_path)
 
         digests = {}
-        for digest in all_digests:
-            digests[digest] = digest_stream.writers[digest].hexdigest
+        for key in digest_objs.keys():
+            digests[key] = digest_objs[key].hexdigest
 
         return metadata, digests
 
