@@ -1,7 +1,11 @@
 import abc
 import uuid
 import base64
-from typing import List
+import asyncio
+import logging
+from typing import List  # noqa
+
+logger = logging.getLogger(__name__)
 
 
 class SimpleStreamWrapper(metaclass=abc.ABCMeta):
@@ -321,7 +325,7 @@ class Base64EncodeStreamWrapper(SimpleStreamWrapper):
         if stream.size is None:
             self._size = None
         else:
-            self._size = Base64EncodeStream.calculate_encoded_size(stream.size)
+            self._size = Base64EncodeStreamWrapper.calculate_encoded_size(stream.size)
 
         super().__init__(**kwargs)
 
