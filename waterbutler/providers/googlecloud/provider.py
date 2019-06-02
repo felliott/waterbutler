@@ -169,7 +169,6 @@ class GoogleCloudProvider(BaseProvider):
 
         created = not await self.exists(path)
 
-
         stream.add_writer('md5', HashStreamWriter(hashlib.md5))
 
         req_method = 'PUT'

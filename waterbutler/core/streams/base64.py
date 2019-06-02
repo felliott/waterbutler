@@ -1,5 +1,6 @@
 import base64
-import asyncio
+
+from waterbutler.core.streams.base import SimpleStreamWrapper
 
 
 class Base64EncodeStream(SimpleStreamWrapper):

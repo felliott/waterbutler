@@ -1,5 +1,5 @@
 import abc
-import asyncio
+from typing import List
 
 
 class SimpleStreamWrapper(metaclass=abc.ABCMeta):
@@ -44,9 +44,9 @@ class SimpleStreamWrapper(metaclass=abc.ABCMeta):
 
 class DigestStreamWrapper(SimpleStreamWrapper):
 
-    def __init__(self, readable: SimpleStreamWrapper, writers=None: dict):
+    def __init__(self, readable: SimpleStreamWrapper, writers: dict=None) -> None:
         super().__init__()
-        assert readable.hasattr('read')
+        assert hasattr(readable, 'read')
         self._readable = readable
         self.writers = writers
 
@@ -67,13 +67,13 @@ class MultiStreamWrapper(SimpleStreamWrapper):
     data for <whutch?>.
     """
 
-    def __init__(self, *readables: List<SimpleStreamWrappers>):
+    def __init__(self, *readables: List[SimpleStreamWrapper]) -> None:
         super().__init__()
 
         self._size = 0
         self._size += sum(x.size for x in readables)
 
-        self._readables = []
+        self._readables = []  # type: List[SimpleStreamWrapper]
         self._readables.extend(readables)
 
         self._current_readable = None
@@ -119,10 +119,10 @@ class CutoffStream(SimpleStreamWrapper):
     :param int cutoff: number of bytes to read before stopping
     """
 
-    def __init__(self, readable: SimpleStreamWrapper, cutoff):
+    def __init__(self, readable: SimpleStreamWrapper, cutoff) -> None:
         super().__init__()
 
-        assert readable.hasattr('read')
+        assert hasattr(readable, 'read')
         self._readable = readable
 
         self._cutoff = cutoff
@@ -182,9 +182,10 @@ class StringStream(SimpleStreamWrapper):
         if n == -1:
             n = self.size
 
-        chunk = data[0:n-1]
-        data = data[n:]
-        if len(data) == 0:
+        # TODO: this kinda sucks, b/c it's mutating internal data. Is that okay?
+        chunk = self._data[0:n - 1]
+        self._data = self._data[n:]
+        if len(self._data) == 0:
             self._at_eof = True
 
         return chunk

@@ -12,6 +12,7 @@ import aiohttp
 from waterbutler.core.path import WaterButlerPath
 from waterbutler.core import exceptions, streams, provider
 from waterbutler.core.exceptions import RetryChunkedUploadCommit
+from waterbutler.core.streams.factories import make_formdata_multistream
 
 from waterbutler.providers.box import settings as pd_settings
 from waterbutler.providers.box.metadata import (BaseBoxMetadata, BoxRevision,
@@ -503,7 +504,8 @@ class BoxProvider(provider.BaseProvider):
             folder._children = await self._get_folder_meta(path)  # type: ignore
             return folder, created
 
-    async def _contiguous_upload(self, path: WaterButlerPath, stream: streams.BaseStream) -> dict:
+    async def _contiguous_upload(self, path: WaterButlerPath,
+                                 stream: streams.SimpleStreamWrapper) -> dict:
         """Upload a file to Box using a single request. This will only be called if the file is
         smaller than the ``NONCHUNKED_UPLOAD_LIMIT``.
 
@@ -512,13 +514,13 @@ class BoxProvider(provider.BaseProvider):
         assert stream.size <= self.NONCHUNKED_UPLOAD_LIMIT
         stream.add_writer('sha1', streams.HashStreamWriter(hashlib.sha1))
 
-        data_stream = streams.FormDataStream(
-            attributes=json.dumps({
+        data_stream = make_formdata_multistream({
+            'attributes': json.dumps({
                 'name': path.name,
                 'parent': {'id': path.parent.identifier}
-            })
-        )
-        data_stream.add_file('file', stream, path.name, disposition='form-data')
+            }),
+            'file': {'stream': stream, 'name': path.name, 'disposition': 'form-data'},
+        })
 
         if path.identifier is not None:
             segments = ['files', path.identifier, 'content']

@@ -1,5 +1,4 @@
 import uuid
-import asyncio
 
 from waterbutler.core.streams.base import MultiStream, SimpleStreamWrapper, StringStream
 
@@ -27,6 +26,7 @@ def make_multistream_from_json(data):
         StringStream('",'),
         StringStream('"}'),
       ]
+
     """
 
     streams = [StringStream('{')]
@@ -40,47 +40,33 @@ def make_multistream_from_json(data):
 
 
 def make_formdata_multistream(data):
-    """A child of MultiSteam used to create stream friendly multipart form data requests.
-    Usage:
+    """Make a MultiStream that represents the form-data encoded representation of the given data.
 
-        >>> stream = FormDataStream(key1='value1', file=FileStream(...))
+    child of MultiStream used to create stream friendly multipart form data requests.
 
-    Or:
+    Usage::
 
-        >>> stream = FormDataStream()
-        >>> stream.add_field('key1', 'value1')
-        >>> stream.add_file('file', FileStream(...), mime='text/plain')
-
-    Additional options for files can be passed as a tuple ordered as:
-
-        >>> FormDataStream(fieldName=(FileStream(...), 'fileName', 'Mime', 'encoding'))
+        >>> stream = make_formdata_multistream(
+        >>>     key1='value1',
+        >>>     fieldName=(FileStream(...), 'fileName', 'Mime', 'encoding')
+        >>> )
 
     Auto generates boundaries and properly concatenates them
+
+    Passes
     Use FormDataStream.headers to get the proper headers to be included with requests
     Namely Content-Length, Content-Type
+
+    :return: a `MultiStream` object
     """
 
-    """:param dict fields: A dict of fieldname: value to create the body of the stream"""
-    boundary = self.make_boundary()
+    def _start_boundary(boundary):
+        return StringStream('--{}\r\n'.format(boundary))
 
-    streams = []
-    for key, value in data.items():
-        if isinstance(value, tuple):
-            streams.extend(self.add_file(key, *value)
-        elif isinstance(value, asyncio.StreamReader):
-            self.add_file(key, value)
-        else:
-            self.add_field(key, value)
+    def _end_boundary(boundary):
+        return StringStream('--{}--\r\n'.format(boundary))
 
-    return MultiStream(streams)
-
-    @classmethod
-    def make_boundary(cls):
-        """Creates a random-ish boundary for form data separator"""
-        return uuid.uuid4().hex
-
-    @classmethod
-    def make_header(cls, name, disposition='form-data', additional_headers=None, **extra):
+    def _make_header(name, disposition='form-data', additional_headers=None, **extra):
         additional_headers = additional_headers or {}
         header = 'Content-Disposition: {}; name="{}"'.format(disposition, name)
 
@@ -102,68 +88,39 @@ def make_formdata_multistream(data):
 
         return header + '\r\n'
 
-
-    @property
-    def end_boundary(self):
-        return StringStream('--{}--\r\n'.format(self.boundary))
-
-    @property
-    def headers(self):
-        """The headers required to make a proper multipart form request
-        Implicitly calls finalize as accessing headers will often indicate sending of the request
-        Meaning nothing else will be added to the stream"""
-        self.finalize()
-
+    def _make_headers(boundary):
+        """The headers required to make a proper multipart form request."""
         return {
-            'Content-Length': str(self.size),
-            'Content-Type': 'multipart/form-data; boundary={}'.format(self.boundary)
+            # 'Content-Length': str(size),
+            'Content-Type': 'multipart/form-data; boundary={}'.format(boundary)
         }
 
-    async def read(self, n=-1):
-        if self.can_add_more:
-            self.finalize()
-        return (await super().read(n=n))
+    boundary = uuid.uuid4().hex
 
-    def finalize(self):
-        assert self.stream, 'Must add at least one stream to finalize'
+    streams = []
+    for key, value in data.items():
+        streams.extend([_start_boundary(boundary)])
 
-        if self.can_add_more:
-            self.can_add_more = False
-            self.add_streams(self.end_boundary)
+        if isinstance(value, dict):
+            header = _make_header(
+                key,
+                filename=value['name'],
+                disposition=value.get('disposition', 'file'),
+                additional_headers={
+                    'Content-Type': value.get('mime', 'application/octet-stream'),
+                    'Content-Transfer-Encoding': value.get('transcoding', 'binary'),
+                }
+            )
+            streams.extend([
+                StringStream(header),
+                value['stream'],
+                StringStream('\r\n')
+            ])
+        else:
+            streams.extend([
+                StringStream(_make_header(key) + value + '\r\n')
+            ])
 
-    def add_fields(self, **fields):
-        for key, value in fields.items():
-            self.add_field(key, value)
+    streams.extend([_end_boundary(boundary)])
 
-    def add_field(self, key, value):
-        assert self.can_add_more, 'Cannot add more fields after calling finalize or read'
-
-        self.add_streams(
-            self._make_boundary_stream(),
-            StringStream(self.make_header(key) + value + '\r\n')
-        )
-
-    def add_file(self, field_name, file_stream, file_name=None, mime='application/octet-stream',
-                 disposition='file', transcoding='binary'):
-        assert self.can_add_more, 'Cannot add more fields after calling finalize or read'
-
-        header = self.make_header(
-            field_name,
-            disposition=disposition,
-            filename=file_name,
-            additional_headers={
-                'Content-Type': mime,
-                'Content-Transfer-Encoding': transcoding
-            }
-        )
-
-        self.add_streams(
-            self._make_boundary_stream(),
-            StringStream(header),
-            file_stream,
-            StringStream('\r\n')
-        )
-
-    def _make_boundary_stream(self):
-        return StringStream('--{}\r\n'.format(self.boundary))
-
+    return MultiStream(streams, headers=_make_headers(boundary))

@@ -7,11 +7,11 @@ import logging
 
 from waterbutler.core import utils
 from waterbutler.core import signing
-from waterbutler.core import streams
 from waterbutler.core import provider
 from waterbutler.core import exceptions
 from waterbutler.core.path import WaterButlerPath
 from waterbutler.core.metadata import BaseMetadata
+from waterbutler.core.streams import SimpleStreamWrapper, DigestStreamWrapper
 
 from waterbutler.providers.osfstorage import settings
 from waterbutler.providers.osfstorage.metadata import OsfStorageFileMetadata
@@ -221,7 +221,7 @@ class OSFStorageProvider(provider.BaseProvider):
         download_kwargs['display_name'] = kwargs.get('display_name') or name
         return await provider.download(**download_kwargs)
 
-    async def upload(self, stream, path, **kwargs):
+    async def upload(self, stream: SimpleStreamWrapper, path, **kwargs):
         """Upload a new file to osfstorage
 
         When a file is uploaded to osfstorage, WB does a bit of a dance to make sure it gets there
@@ -238,10 +238,10 @@ class OSFStorageProvider(provider.BaseProvider):
         issuer.
         """
 
-        metadata = await self._send_to_storage_provider(stream, path, **kwargs)
+        metadata, digests = await self._send_to_storage_provider(stream, path, **kwargs)
         metadata = metadata.serialized()
 
-        data, created = await self._send_to_metadata_provider(stream, path, metadata, **kwargs)
+        data, created = await self._send_to_metadata_provider(path, metadata, digests, **kwargs)
 
         name = path.name
 
@@ -387,8 +387,8 @@ class OSFStorageProvider(provider.BaseProvider):
             if getattr(download_stream, 'name', None):
                 dest_path.rename(download_stream.name)
 
-            await dest_provider._send_to_storage_provider(download_stream,  # type: ignore
-                                                          dest_path, **kwargs)
+            _, _ = await dest_provider._send_to_storage_provider(download_stream,  # type: ignore
+                                                                 dest_path, **kwargs)
             meta_data, created = await self.intra_move(dest_provider, src_path, dest_path)
 
         return meta_data, created
@@ -535,26 +535,26 @@ class OSFStorageProvider(provider.BaseProvider):
 
         return folder_meta, created
 
-    async def _send_to_storage_provider(self, stream, path, **kwargs):
+    async def _send_to_storage_provider(self, stream: SimpleStreamWrapper, path,
+                                        **kwargs) -> typing.Tuple[dict, dict]:
         """Send uploaded file data to the storage provider, where it will be stored w/o metadata
         in a content-addressable format.
 
         :return: metadata of the file as it exists on the storage provider
         """
 
+        all_digests = ['md5', 'sha1', 'sha256']
+        digest_stream = DigestStreamWrapper(stream, [[x, getattr(hashlib, x)] for x in all_digests])
+
         pending_name = str(uuid.uuid4())
         provider = self.make_provider(self.settings)
         remote_pending_path = await provider.validate_path('/' + pending_name)
         logger.debug('upload: remote_pending_path::{}'.format(remote_pending_path))
 
-        stream.add_writer('md5', streams.HashStreamWriter(hashlib.md5))
-        stream.add_writer('sha1', streams.HashStreamWriter(hashlib.sha1))
-        stream.add_writer('sha256', streams.HashStreamWriter(hashlib.sha256))
-
-        await provider.upload(stream, remote_pending_path, check_created=False,
+        await provider.upload(digest_stream, remote_pending_path, check_created=False,
                               fetch_metadata=False, **kwargs)
 
-        complete_name = stream.writers['sha256'].hexdigest
+        complete_name = digest_stream.writers['sha256'].hexdigest
         remote_complete_path = await provider.validate_path('/' + complete_name)
 
         logger.info('=== remote_complete_path:({})'.format(remote_complete_path))
@@ -567,9 +567,14 @@ class OSFStorageProvider(provider.BaseProvider):
         else:
             await provider.delete(remote_pending_path)
 
-        return metadata
+        digests = {}
+        for digest in all_digests:
+            digests[digest] = digest_stream.writers[digest].hexdigest
 
-    async def _send_to_metadata_provider(self, stream, path, metadata, **kwargs):
+        return metadata, digests
+
+    async def _send_to_metadata_provider(self, path, metadata, digests: dict,
+                                         **kwargs) -> typing.Tuple[dict, dict]:
         """Send metadata about the uploaded file (including its location on the storage provider) to
         the OSF.
 
@@ -585,11 +590,7 @@ class OSFStorageProvider(provider.BaseProvider):
                 'user': self.auth['id'],
                 'settings': self.settings['storage'],
                 'metadata': metadata,
-                'hashes': {
-                    'md5': stream.writers['md5'].hexdigest,
-                    'sha1': stream.writers['sha1'].hexdigest,
-                    'sha256': stream.writers['sha256'].hexdigest,
-                },
+                'hashes': digests,
                 'worker': {
                     'host': os.uname()[1],
                     # TODO: Include additional information

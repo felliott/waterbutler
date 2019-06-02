@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from waterbutler.core.streams.base import SimpleStreamWrapper, MultiStream, StringStream
+from waterbutler.core.streams.base import SimpleStreamWrapper
 
 logger = logging.getLogger(__name__)
 
