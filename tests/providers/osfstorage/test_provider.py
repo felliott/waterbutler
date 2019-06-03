@@ -9,6 +9,7 @@ import aiohttpretty
 from waterbutler.core import metadata
 from waterbutler.core import exceptions
 from waterbutler.core.path import WaterButlerPath
+from waterbutler.core.stream_wrappers import DigestStreamWrapper
 from waterbutler.providers.osfstorage.provider import OSFStorageProvider
 from waterbutler.providers.osfstorage.metadata import (OsfStorageFileMetadata,
                                                        OsfStorageFolderMetadata,
@@ -19,7 +20,7 @@ from tests.providers.osfstorage.fixtures import (auth, credentials, settings,
                                                  settings_region_one, settings_region_two,
                                                  provider_one, provider_two,
                                                  provider_and_mock_one, provider_and_mock_two,
-                                                 file_stream, file_like, file_content,
+                                                 file_stream, file_like, file_content, file_sha256,
                                                  file_lineage, file_metadata,
                                                  file_metadata_object, file_path,
                                                  folder_lineage, folder_metadata,
@@ -27,7 +28,7 @@ from tests.providers.osfstorage.fixtures import (auth, credentials, settings,
                                                  revisions_metadata, revision_metadata_object,
                                                  download_response, download_path,
                                                  upload_response, upload_path, root_path,
-                                                 mock_time, mock_inner_provider,)
+                                                 mock_time, mock_inner_provider)
 
 
 def build_signed_url_without_auth(provider, method, *segments, **params):
@@ -692,7 +693,7 @@ class TestUploads:
     @pytest.mark.asyncio
     @pytest.mark.aiohttpretty
     async def test_upload_new(self, monkeypatch, provider_and_mock_one, file_stream,
-                              upload_response, upload_path, mock_time):
+                              file_sha256, upload_response, upload_path, mock_time):
         self.patch_uuid(monkeypatch)
 
         url = 'https://waterbutler.io/{}/children/'.format(upload_path.parent.identifier)
@@ -712,7 +713,7 @@ class TestUploads:
         assert upload_path.identifier_path == res.path
 
         inner_provider.delete.assert_called_once_with(WaterButlerPath('/patched_path'))
-        expected_path = WaterButlerPath('/' + file_stream.writers['sha256'].hexdigest)
+        expected_path = WaterButlerPath('/' + file_sha256)
         inner_provider.metadata.assert_called_once_with(expected_path)
         inner_provider.upload.assert_called_once_with(file_stream, WaterButlerPath('/patched_path'),
                                                       check_created=False, fetch_metadata=False)
@@ -720,7 +721,7 @@ class TestUploads:
     @pytest.mark.asyncio
     @pytest.mark.aiohttpretty
     async def test_upload_existing(self, monkeypatch, provider_and_mock_one, file_stream,
-                                   upload_path, upload_response, mock_time):
+                                   file_sha256, upload_path, upload_response, mock_time):
         self.patch_uuid(monkeypatch)
         provider, inner_provider = provider_and_mock_one
 
@@ -741,7 +742,7 @@ class TestUploads:
         assert res.extra['checkout'] is None
         assert upload_path.identifier_path == res.path
 
-        expected_path = WaterButlerPath('/' + file_stream.writers['sha256'].hexdigest)
+        expected_path = WaterButlerPath('/' + file_sha256)
         inner_provider.metadata.assert_called_once_with(expected_path)
         inner_provider.upload.assert_called_once_with(file_stream,
                                                       WaterButlerPath('/patched_path'),
@@ -783,12 +784,11 @@ class TestUploads:
         with pytest.raises(Exception):
             await provider.upload(file_stream, path)
 
-        inner_provider.upload.assert_called_once_with(
-            file_stream,
-            WaterButlerPath('/patched_path'),
-            check_created=False,
-            fetch_metadata=False
-        )
+        inner_provider.upload.assert_called_once()
+        args, kwargs = inner_provider.upload.call_args
+        assert isinstance(args[0], DigestStreamWrapper)
+        assert args[1] == WaterButlerPath('/patched_path')
+        assert kwargs == {'check_created': False, 'fetch_metadata': False}
 
 
 class TestCrossRegionMove:
@@ -801,7 +801,7 @@ class TestCrossRegionMove:
 
         src_provider.download = utils.MockCoroutine(return_value=file_stream)
         src_provider.intra_move = utils.MockCoroutine(return_value=(upload_response, True))
-        dst_provider._send_to_storage_provider = utils.MockCoroutine()
+        dst_provider._send_to_storage_provider = utils.MockCoroutine(return_value=(None, None))
 
         src_path = WaterButlerPath('/foo', _ids=('Test', '56ab34'))
         dest_path = WaterButlerPath('/', _ids=('Test',))

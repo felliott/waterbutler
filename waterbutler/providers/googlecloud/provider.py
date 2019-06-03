@@ -11,7 +11,8 @@ from google.oauth2 import service_account
 from waterbutler.core.path import WaterButlerPath
 from waterbutler.core.provider import BaseProvider
 from waterbutler.core.utils import make_disposition
-from waterbutler.core.streams import BaseStream, HashStreamWriter, ResponseStreamReader
+from waterbutler.core.streams import HashStreamWriter, ResponseStreamReader
+from waterbutler.core.stream_wrappers import SimpleStreamWrapper, DigestStreamWrapper
 from waterbutler.core.exceptions import (WaterButlerError, MetadataError, NotFoundError,
                                          CopyError, UploadError, DownloadError, DeleteError,
                                          UploadChecksumMismatchError, InvalidProviderConfigError, )
@@ -131,8 +132,8 @@ class GoogleCloudProvider(BaseProvider):
         else:
             return await self._metadata_object(path, is_folder=False)  # type: ignore
 
-    async def upload(self, stream: BaseStream, path: WaterButlerPath, *args,
-                     **kwargs) -> typing.Tuple[GoogleCloudFileMetadata, bool]:
+    async def upload(self, stream: SimpleStreamWrapper, path: WaterButlerPath, *args,
+                     **kwargs) -> typing.Tuple[GoogleCloudFileMetadata, bool]:  # type: ignore
         """Upload a file stream to the given WaterButlerPath.
 
         API docs:
@@ -155,7 +156,7 @@ class GoogleCloudProvider(BaseProvider):
         message ``SignatureDoesNotMatch`` if auto headers were not skipped.
 
         :param stream: the stream to post
-        :type stream: :class:`.streams.BaseStream`
+        :type stream: :class:`.stream_wrappers.SimpleStreamWrapper`
         :param path: the WaterButlerPath of the file to upload
         :type path: :class:`.WaterButlerPath`
         :param list args: additional args are ignored
@@ -166,17 +167,18 @@ class GoogleCloudProvider(BaseProvider):
 
         created = not await self.exists(path)
 
-        stream.add_writer('md5', HashStreamWriter(hashlib.md5))
+        logger.info('++++++ inside gcloud.upload')
+        digest_stream = DigestStreamWrapper(stream, {'md5': HashStreamWriter(hashlib.md5)})
 
         req_method = 'PUT'
         obj_name = utils.get_obj_name(path, is_folder=False)
         signed_url = functools.partial(self._build_and_sign_url, req_method, obj_name, **{})
-        headers = {'Content-Length': str(stream.size)}
+        headers = {'Content-Length': str(digest_stream.size)}
 
         resp = await self.make_request(
             req_method,
             signed_url,
-            data=stream,
+            data=digest_stream,
             skip_auto_headers={'Content-Type'},
             headers=headers,
             expects=(HTTPStatus.OK,),
@@ -189,7 +191,9 @@ class GoogleCloudProvider(BaseProvider):
         if not header_etag:
             raise UploadError('Missing response header "ETag" for upload.')
 
-        if header_etag.strip('"') != stream.writers['md5'].hexdigest:
+        logger.info('+++ diggers: header:({})  stream:({})'.format(header_etag.strip('"'),
+                                                                   digest_stream.writers['md5'].hexdigest))
+        if header_etag.strip('"') != digest_stream.writers['md5'].hexdigest:
             raise UploadChecksumMismatchError()
 
         metadata = await self._metadata_object(path, is_folder=False)

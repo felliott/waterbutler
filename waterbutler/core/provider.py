@@ -12,8 +12,10 @@ import furl
 import aiohttp
 
 from waterbutler.core import streams
+from waterbutler.core import payload
 from waterbutler.core import exceptions
 from waterbutler.core import path as wb_path
+from waterbutler.core import stream_wrappers
 from waterbutler import settings as wb_settings
 from waterbutler.core.metrics import MetricsRecord
 from waterbutler.core import metadata as wb_metadata
@@ -257,6 +259,11 @@ class BaseProvider(metaclass=abc.ABCMeta):
         byte_range = kwargs.pop('range', None)
         if byte_range:
             kwargs['headers']['Range'] = self._build_range_header(byte_range)
+
+        if kwargs.get('data', False) and isinstance(kwargs['data'], stream_wrappers.SimpleStreamWrapper):
+            stream = kwargs.pop('data')
+            aio_payload = payload.WaterButlerPayload(stream)
+            kwargs['data'] = aio_payload
 
         method = method.upper()
         session = self.get_or_create_session()

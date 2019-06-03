@@ -240,6 +240,7 @@ class OSFStorageProvider(provider.BaseProvider):
         """
 
         metadata_obj, digests = await self._send_to_storage_provider(stream, path, **kwargs)
+        logger.info('Yargga yargga: digests:({})'.format(digests))
         metadata = metadata_obj.serialized()
 
         data, created = await self._send_to_metadata_provider(path, metadata, digests, **kwargs)
@@ -544,6 +545,7 @@ class OSFStorageProvider(provider.BaseProvider):
         :return: metadata of the file as it exists on the storage provider
         """
 
+        logger.info('????? alpha')
         digest_objs = {
             'md5': streams.HashStreamWriter(hashlib.md5),
             'sha1': streams.HashStreamWriter(hashlib.sha1),
@@ -552,17 +554,21 @@ class OSFStorageProvider(provider.BaseProvider):
 
         digest_stream = DigestStreamWrapper(stream, digest_objs)
 
+        logger.info('????? beta')
         pending_name = str(uuid.uuid4())
         provider = self.make_provider(self.settings)
         remote_pending_path = await provider.validate_path('/' + pending_name)
         logger.debug('upload: remote_pending_path::{}'.format(remote_pending_path))
 
+        logger.info('????? gamma')
         await provider.upload(digest_stream, remote_pending_path, check_created=False,
                               fetch_metadata=False, **kwargs)
 
+        logger.info('????? delta')
         complete_name = digest_stream.writers['sha256'].hexdigest
         remote_complete_path = await provider.validate_path('/' + complete_name)
 
+        logger.info('????? epsilon')
         logger.info('=== remote_complete_path:({})'.format(remote_complete_path))
         try:
             metadata = await provider.metadata(remote_complete_path)
@@ -573,10 +579,12 @@ class OSFStorageProvider(provider.BaseProvider):
         else:
             await provider.delete(remote_pending_path)
 
+        logger.info('????? zeta')
         digests = {}
         for key in digest_objs.keys():
             digests[key] = digest_objs[key].hexdigest
 
+        logger.info('$$$$ inside _send_to_storage_provider: digests:({})'.format(digests))
         return metadata, digests
 
     async def _send_to_metadata_provider(self, path, metadata, digests: dict,

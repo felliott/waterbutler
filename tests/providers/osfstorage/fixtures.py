@@ -201,6 +201,12 @@ def file_stream(file_like):
 
 
 @pytest.fixture
+def file_sha256(file_like):
+    # 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+    return 'e74ca13b4c0a61dcf7746ff71c1238e2cd1b5026838c8b3c5e147595aa627025'
+
+
+@pytest.fixture
 def provider_one(auth, credentials, settings_region_one):
     return OSFStorageProvider(auth, credentials, settings_region_one)
 

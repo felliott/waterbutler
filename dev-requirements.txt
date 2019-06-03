@@ -1,6 +1,6 @@
 -r requirements.txt
 
-git+https://github.com/cslzchen/aiohttpretty.git@feature/aiohttp3
+git+https://github.com/felliott/aiohttpretty.git@feature/oathpit-slurping
 colorlog==2.5.0
 flake8==3.0.4
 ipdb

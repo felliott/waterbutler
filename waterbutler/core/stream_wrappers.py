@@ -57,12 +57,15 @@ class DigestStreamWrapper(SimpleStreamWrapper):
         self.writers = writers
 
     def size(self):
-        return self._readable.size()
+        return self._readable.size
 
     async def read(self, size=-1):
-        data = await super()._readable.read(size)
+        logger.info('### digest::read')
+        data = await self._readable.read(size)
         if data is not None:
+            logger.info('##### data not none')
             for writer in self.writers.values():
+                logger.info('####### writing to {}'.format(type(writer)))
                 writer.write(data)
         return data
 
@@ -189,7 +192,7 @@ class StringStreamWrapper(SimpleStreamWrapper):
             n = self.size
 
         # TODO: this kinda sucks, b/c it's mutating internal data. Is that okay?
-        chunk = self._data[0:n - 1]
+        chunk = self._data[0:n]
         self._data = self._data[n:]
         if len(self._data) == 0:
             self._at_eof = True
