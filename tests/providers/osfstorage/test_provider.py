@@ -1,5 +1,6 @@
 import os
 import json
+import asyncio
 from http import client
 from unittest import mock
 
@@ -701,6 +702,15 @@ class TestUploads:
 
         provider, inner_provider = provider_and_mock_one
         inner_provider.metadata = utils.MockCoroutine(return_value=utils.MockFileMetadata())
+
+        async def _exhaust_stream(digest_stream, *args, **kwargs):
+            await digest_stream.read()
+            # return mock.DEFAULT
+
+        # def _read_stream_side_effect(digest_stream, *arg, **kwargs):
+        #     asyncio.get_event_loop().call_soon(_exhaust_stream(digest_stream))
+
+        inner_provider.upload = _exhaust_stream
 
         res, created = await provider.upload(file_stream, upload_path)
 

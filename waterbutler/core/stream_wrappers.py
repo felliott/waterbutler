@@ -5,6 +5,8 @@ import asyncio
 import logging
 from typing import List  # noqa
 
+import aiohttp
+
 logger = logging.getLogger(__name__)
 
 
@@ -22,19 +24,22 @@ class SimpleStreamWrapper(metaclass=abc.ABCMeta):
         super().__init__()
         self._at_eof = False
 
-    def __aiter__(self):
-        return self
+    # def __aiter__(self):
+    #     return aiohttp.streams.AsyncStreamIterator(self.read())  # type: ignore
 
-    # TODO: Add more note on `AsyncIterablePayload` and its `write()` method in aiohttp3
-    # TODO: Improve the BaseStream with `aiohttp.streams.AsyncStreamReaderMixin`
-    async def __anext__(self):
-        try:
-            chunk = await self.read()
-        except EOFError:
-            raise StopAsyncIteration
-        if chunk == b'':
-            raise StopAsyncIteration
-        return chunk
+    def iter_chunked(self, n: int) -> aiohttp.streams.AsyncStreamIterator[bytes]:
+        return aiohttp.streams.AsyncStreamIterator(lambda: self.read(n))  # type: ignore
+
+    # # TODO: Add more note on `AsyncIterablePayload` and its `write()` method in aiohttp3
+    # # TODO: Improve the BaseStream with `aiohttp.streams.AsyncStreamReaderMixin`
+    # async def __anext__(self):
+    #     try:
+    #         chunk = await self.read()
+    #     except EOFError:
+    #         raise StopAsyncIteration
+    #     if chunk == b'':
+    #         raise StopAsyncIteration
+    #     return chunk
 
     @abc.abstractproperty
     def size(self):
