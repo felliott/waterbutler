@@ -1,9 +1,9 @@
 import aiohttp
 
-from waterbutler import settings as wb_settings
+from waterbutler.server import settings as settings
 
 
 class WaterButlerPayload(aiohttp.payload.AsyncIterablePayload):
 
     def __init__(self, value, *args, **kwargs) -> None:
-        super().__init__(value.iter_chunked(wb_settings.CHUNK_SIZE), *args, **kwargs)
+        super().__init__(value.iter_chunked(settings.CHUNK_SIZE), *args, **kwargs)
