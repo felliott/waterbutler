@@ -285,9 +285,41 @@ class BaseProvider(metaclass=abc.ABCMeta):
         method = method.upper()
         while retry >= 0:
             # Don't overwrite the callable ``url`` so that signed URLs are refreshed for every retry
-            non_callable_url = url() if callable(url) else url
+            # non_callable_url = url() if callable(url) else url
+
+            non_callable_url = None
+            logger.info('>>>>  checking url in make_request')
+            logger.info('>>>>  ....url isa:({}) and is:({})'.format(type(url), url))
+            logger.info('>>>>  ....args are:({})'.format(list(args)))
+            logger.info('>>>>  ....kwargs are:({})'.format(dict(kwargs)))
+
+            if callable(url):
+                logger.info('>>>>  ......url is callable, resolve it')
+                non_callable_url = url()
+                if isinstance(non_callable_url, tuple):
+                    yonch, yonch_data, yonch_params = non_callable_url
+                    non_callable_url = yonch
+                    if kwargs.get('params', None) is None:
+                        kwargs['params'] = yonch_params
+                    else:
+                        for k, v in yonch_params.items():
+                            kwargs['params'][k] = v
+
+                    kwargs['data'] = yonch_data
+            else:
+                logger.info('>>>>  ......url is NOT callable')
+                non_callable_url = url
+
+            logger.info('>>>>  ....post-resolve')
+            logger.info('>>>>  ......url isa:({}) and is:({})'.format(type(non_callable_url),
+                                                                           non_callable_url))
+            logger.info('>>>>  ......args are:({})'.format(list(args)))
+            logger.info('>>>>  ......kwargs are:({})'.format(dict(kwargs)))
+
             try:
                 self.provider_metrics.incr('requests.count')
+                if retry == 0:
+                    self.provider_metrics.incr('requests.retry')
                 # TODO: use a `dict` to select methods with either `lambda` or `functools.partial`
                 if method == 'GET':
                     response = await session.get(non_callable_url,

@@ -4,6 +4,7 @@ import uuid
 import typing
 import hashlib
 import logging
+import functools
 
 from waterbutler.core import utils
 from waterbutler.core import signing
@@ -46,15 +47,28 @@ class OSFStorageProvider(provider.BaseProvider):
         self.provider_name = settings['storage'].get('provider')
 
     async def make_signed_request(self, method, url, data=None, params=None, ttl=100, **kwargs):
-        url, data, params = self.build_signed_url(
-            method,
-            url,
-            data=data,
-            params=params,
-            ttl=ttl,
-            **kwargs
-        )
-        return await self.make_request(method, url, data=data, params=params, **kwargs)
+        logger.info('@@@@ starting signed request: method:({}) url:({}) data:({}) '
+                    'params:({})'.format(method, url, data, params))
+        logger.info('@@@@ ....and then kwargs:({})'.format(dict(kwargs)))
+
+        # url, data, params = self.build_signed_url(
+        #     method,
+        #     url,
+        #     data=data,
+        #     params=params,
+        #     ttl=ttl,
+        #     **kwargs
+        # )
+        # logger.info('@@@@ ....post-build_signed_url: url:({}) data:({}) params:({}) '
+        #             'kwargs:({})'.format(url, data, params, dict(kwargs)))
+        # return await self.make_request(method, url, data=data, params=params, **kwargs)
+
+        url = functools.partial(self.build_signed_url, method, url, data=data, params=params, ttl=100,
+                                secret=settings.HMAC_SECRET, algo=settings.HMAC_ALGORITHM,
+                                query_methods=QUERY_METHODS, **kwargs)
+
+        logger.info('making signed request: URL:({}) kwargs:({})'.format(url, dict(kwargs)))
+        return await self.make_request(method, url, **kwargs)
 
     async def validate_v1_path(self, path, **kwargs):
         if path == '/':
@@ -166,9 +180,10 @@ class OSFStorageProvider(provider.BaseProvider):
     async def intra_copy(self, dest_provider, src_path, dest_path):
         return await self._do_intra_move_or_copy('copy', dest_provider, src_path, dest_path)
 
-    def build_signed_url(self, method, url, data=None, params=None, ttl=100, **kwargs):
-        signer = signing.Signer(settings.HMAC_SECRET, settings.HMAC_ALGORITHM)
-        if method.upper() in QUERY_METHODS:
+    def build_signed_url(self, method, url, data=None, params=None, ttl=100, secret=settings.HMAC_SECRET,
+                          algo=settings.HMAC_ALGORITHM, query_methods=QUERY_METHODS, **kwargs):
+        signer = signing.Signer(secret, algo)
+        if method.upper() in query_methods:
             signed = signing.sign_data(signer, params or {}, ttl=ttl)
             params = signed
         else:
