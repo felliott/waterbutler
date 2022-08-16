@@ -247,7 +247,9 @@ class BaseFigshareProvider(provider.BaseProvider):
         :param metadata: Figshare*Metadata object for child
         """
 
+        logger.info('path_from_metadata -- parent_path:({})  metadata:({})'.format(parent_path, metadata))
         if parent_path.is_root and metadata.kind != 'folder':
+            logger.info('path_from_metadata -- md.art_name:({})  _id:({})  md.extra:({})'.format(metadata.article_name, str(metadata.extra['articleId']), metadata.extra))
             intermediate_path = parent_path.child(metadata.article_name,
                                                   _id=str(metadata.extra['articleId']),
                                                   folder=True)
